@@ -301,11 +301,17 @@ Vector2D getMTV(Polygon *p1, Polygon *p2) {
 
     return MTV;
 }
-void resolvePen(Polygon *p1, Polygon *p2) {
+void resolvePenEq(Polygon *p1, Polygon *p2) {
     Vector2D mtv = getMTV(p1, p2);
     if (! equalsV2D(NOTHING, mtv)) {
         movePolygon(p1, multiplyV2D(mtv, 0.5));
         movePolygon(p2, multiplyV2D(mtv, -0.5));
+    }
+}
+void resolvePenDom(Polygon *p1, Polygon *p2) {
+    Vector2D mtv = getMTV(p1, p2);
+    if (! equalsV2D(NOTHING, mtv)) {
+        movePolygon(p2, multiplyV2D(mtv, - 1));
     }
 }
 

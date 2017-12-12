@@ -25,6 +25,10 @@ RigidBody *newRigidBody(double mass, double e, bool immovable, Polygon *p) {
     return rb;
 }
 
+static bool isImmovable(RigidBody *rb) {
+    return rb->invMass == 0.0000;
+}
+
 //Helper:
 static double min(double x, double y) {
     return x < y ? x : y;
@@ -60,12 +64,24 @@ void collide(RigidBody *rb1, RigidBody *rb2) {
         double magnitude = (max(overlap - slop, 0) / (rb1->invMass + rb2->invMass)) * percent;
 
         Vector2D correction = multiplyV2D(basis, magnitude);
-        movePolygon(rb1->polygon, multiplyV2D(correction, rb1->invMass));
-        movePolygon(rb2->polygon, multiplyV2D(correction, -rb2->invMass));
+        if (! isImmovable(rb1) && ! isImmovable(rb2)) {
+            movePolygon(rb1->polygon, multiplyV2D(correction, rb1->invMass));
+            movePolygon(rb2->polygon, multiplyV2D(correction, -rb2->invMass));
+        } else if (isImmovable(rb1) && ! isImmovable(rb2)) {
+            movePolygon(rb2->polygon, multiplyV2D(correction, rb2->invMass + rb1->invMass));
+        } else if (!isImmovable(rb1) && isImmovable(rb2)) {
+            movePolygon(rb1->polygon, multiplyV2D(correction, rb2->invMass + rb1->invMass));
+        }
     }
 }
 void resolveRBPen(RigidBody *rb1, RigidBody *rb2) {
-    resolvePen(rb1->polygon, rb2->polygon);
+    if (! isImmovable(rb1) && ! isImmovable(rb2)){
+        resolvePenEq(rb1->polygon, rb2->polygon);
+    } else if (isImmovable(rb1) && ! isImmovable(rb2)) {
+        resolvePenDom(rb1->polygon, rb2->polygon);
+    } else if (! isImmovable(rb1) && isImmovable(rb2)) {
+        resolvePenDom(rb2->polygon, rb1->polygon);
+    }
 }
 
 //Drawing:

@@ -5,26 +5,60 @@
 //http://www.dyn4j.org/2010/01/sat/ [3] - Seperating Axis Theorem.
 #define SDL_MAIN_HANDLED
 
-#include <assert.h>
-
 #include "Physics\RigidBodies.h"
 #include "Input\MouseInput.h"
 #include "Input\KeyboardInput.h"
+
+#include <sys/time.h>
+#include <assert.h>
 
 const char TITLE[] = "Collision";
 const int W = 1280, H = 720;
 const double TPS = 60;
 
+struct State {
+    bool running, setupMode, testMode;
+};
+typedef struct State State;
+
 //Initialisation:
+State *newState() {
+    State *s = malloc(sizeof(State));
+    s->running = true;
+    s->setupMode = true;
+    s->testMode = false;
+    return s;
+}
 RigidBodies *getRigidBodies() {
     //Create an empty pointer to a polygon list.
     int numRigidBodies = 5;
-    RigidBodies *rbs = newRigidBodies(W, H, numRigidBodies);
+    RigidBodies *rbs = newRigidBodies(W, W, numRigidBodies);
 
-    int n;
+    double wallXS1[] = {0, 0, 1280, 1280};
+    double wallYS1[] = {0, 10, 10, 0};
+
+    double wallXS2[] = {0, 0, 1280, 1280};
+    double wallYS2[] = {710, 720, 720, 710};
+
+    double wallXS3[] = {1270, 1260, 1260, 1270};
+    double wallYS3[] = {20, 20, 710, 710};
+
+    double wallXS4[] = {10, 20, 20, 10};
+    double wallYS4[] = {20, 20, 710, 710};
+
+    Colour cw = {0, 0, 0, 255};
+
+    Polygon *w1 = newPolygon(4, cw, wallXS1, wallYS1);
+    Polygon *w2 = newPolygon(4, cw, wallXS2, wallYS2);
+    Polygon *w3 = newPolygon(4, cw, wallXS3, wallYS3);
+    Polygon *w4 = newPolygon(4, cw, wallXS4, wallYS4);
+
+    addRigidBody(rbs, newRigidBody(1, 1, true, w1));
+    addRigidBody(rbs, newRigidBody(1, 1, true, w2));
+    addRigidBody(rbs, newRigidBody(1, 1, true, w3));
+    addRigidBody(rbs, newRigidBody(1, 1, true, w4));
 
     //Set up a set of polygons:
-    n = 5;
     Colour c0 = {255, 165, 0, 255};
     double xs0[] = {550, 521, 532, 568, 579};
     double ys0[] = {520, 541, 574, 574, 541};
@@ -33,25 +67,17 @@ RigidBodies *getRigidBodies() {
         double mass = 1;
         double e = 1;
         bool immovable = false;
-        Polygon *p0 = newPolygon(n, c0, xs0, ys0);
-        addRigidBody(rbs, newRigidBody(mass, e, immovable, p0));
+        int n = 5;
+        Polygon *p = newPolygon(n, c0, xs0, ys0);
+        addRigidBody(rbs, newRigidBody(mass, e, immovable, p));
     }
-    RigidBody *rb = getRigidBody(rbs, 10);
+    RigidBody *rb = getRigidBody(rbs, 15);
     rb->xv = 10;
     rb->yv = 1;
 
     return rbs;
 }
 
-//Drawing:
-void drawBackground(SDL_Renderer *renderer) {
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    SDL_RenderClear(renderer);
-}
-void draw(SDL_Renderer *renderer, RigidBodies *rbs) {
-    drawBackground(renderer);
-    drawRigidBodies(rbs, renderer);
-}
 
 //Updating:
 bool touchingMouse(RigidBody *rb) {
@@ -85,50 +111,98 @@ void moveByUser(RigidBodies *rbs) {
     }
 }
 
-void update(RigidBodies *rbs, bool setupMode) {
-    updateRigidBodies(rbs);
-    if (setupMode) {
+void update(RigidBodies *rbs, State *s) {
+    SDL_Event ev;
+    while (SDL_PollEvent(&ev) != 0) {
+        if (ev.type == SDL_QUIT) {
+            s->running = false;
+        }
+    }
+    updateKeyboard();
+    updateMouse(ev);
+
+    if (keyPressed(SDL_SCANCODE_T)) s->testMode = ! s->testMode;
+    if (keyPressed(SDL_SCANCODE_RETURN)) s->setupMode = ! s->setupMode;
+    if (keyPressed(SDL_SCANCODE_ESCAPE)) s->running = ! s->running;
+
+    if (s->setupMode) {
         moveByUser(rbs);
+        updateRigidBodies(rbs);
         resolveAllPen(rbs);
     } else {
         moveRigidBodies(rbs);
+        updateRigidBodies(rbs);
         collideAll(rbs);
     }
 }
 
-//Main Loop:
-void loop(SDL_Renderer *renderer, bool test) {
-    double T = 1000/TPS; //Calculate time for one tick in ms.
-    SDL_Event ev;
 
-    bool running = true;
-    bool setupMode = true;
+//Drawing:
+void drawBackground(SDL_Renderer *renderer) {
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_RenderClear(renderer);
+}
+void draw(RigidBodies *rbs, State *s, SDL_Renderer *renderer) {
+    drawBackground(renderer);
+    drawRigidBodies(rbs, renderer);
+
+    if (s->testMode) {
+        SDL_SetRenderDrawColor(renderer, 192, 192, 192, 255);
+        drawRigidBodiesAABB(rbs, renderer);
+        drawQTree(rbs->q, renderer);
+    }
+
+    SDL_RenderPresent(renderer); //Draw the rigid bodies.
+}
+
+//Main Loop:
+void loop(SDL_Renderer *renderer) {
+    State *s = newState();
+
+    double T = 1000/TPS; //Calculate time for one tick in ms.
+
 
     RigidBodies *rbs = getRigidBodies();
     resolveAllPen(rbs);
 
-    while (running) {
+
+    double uSPreTick = T * 1000;
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+
+    long int lastTime, now;
+    lastTime = tv.tv_usec;
+
+    double unprocessed = 0;
+
+    bool canRender = false;
+    while(s->running) {
+        SDL_Event ev;
         while (SDL_PollEvent(&ev) != 0) {
             if (ev.type == SDL_QUIT) {
-                running = false;
+                s->running = false;
             }
         }
 
-        if (keyPressed(SDL_SCANCODE_T)) test = ! test;
-        if (keyPressed(SDL_SCANCODE_RETURN)) setupMode = ! setupMode;
-        if (keyPressed(SDL_SCANCODE_ESCAPE)) running = ! running;
+        gettimeofday(&tv, NULL);
+        now = tv.tv_usec;
+        if (lastTime > now) {
+            lastTime -= 1000000;
+        }
+        unprocessed += (double) (now - lastTime) / uSPreTick; //Calculate how many updates should have been processed to maintain desired TPS.
+        lastTime = now;
 
-        updateKeyboard();
-        updateMouse(ev);
-        update(rbs, setupMode);
-        draw(renderer, rbs);
-        if (test) {
-            SDL_SetRenderDrawColor(renderer, 192, 192, 192, 255);
-            drawRigidBodiesAABB(rbs, renderer);
-            drawQTree(rbs->q, renderer);
+        if (canRender) {
+            draw(rbs, s, renderer);
         }
 
-        SDL_RenderPresent(renderer); //Draw the polygons.
+        canRender = false;
+        while(unprocessed >= 1) {
+            update(rbs, s); //Processes all unprocessed updates.
+            unprocessed -= 1;
+            canRender = true;
+        }
+
         SDL_Delay(T); //Pause.
     }
     /*
@@ -166,13 +240,6 @@ void tests() {
     */
 
 
-    SDL_Window *window;
-    SDL_Renderer *renderer;
-    SDL_CreateWindowAndRenderer(W, H, 0, &window, &renderer);
-    SDL_SetWindowTitle(window, TITLE);
-    loop(renderer, true);
-    SDL_Quit();
-
     puts("All tests passed!");
 
 }
@@ -194,7 +261,7 @@ int main(int argc, char *argv[]) {
     SDL_CreateWindowAndRenderer(W, H, 0, &window, &renderer);
     SDL_SetWindowTitle(window, TITLE);
 
-    loop(renderer, false);
+    loop(renderer);
 
     return 0;
 }

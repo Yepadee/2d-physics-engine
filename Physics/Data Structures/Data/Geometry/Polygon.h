@@ -26,6 +26,7 @@ void movePolygon(Polygon *p, Vector2D dp);
 bool insidePolygon(int x, int y, Polygon *p);
 bool colliding(Polygon *p1, Polygon *p2);
 Vector2D getMTV(Polygon *p1, Polygon *p2);
-void resolvePen(Polygon *p1, Polygon *p2);
+void resolvePenEq(Polygon *p1, Polygon *p2);
+void resolvePenDom(Polygon *p1, Polygon *p2);
 
 SDL_Rect getAABB(Polygon *p);

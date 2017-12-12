@@ -24,7 +24,6 @@ void collideAll(RigidBodies *rbs) {
         RigidBody *rb1 = getRigidBody(rbs, i);
         ArrayList *toCollide = getCloseRBS(rbs->q, rb1);
         for (int j = 0; j < length(toCollide); j ++) {
-            if (i == j) continue;
             RigidBody *rb2 = get(toCollide, j);
             collide(rb1, rb2);
         }
@@ -33,9 +32,8 @@ void collideAll(RigidBodies *rbs) {
 void resolveAllPen(RigidBodies *rbs) {
     for (int i = 0; i < numRigidBodies(rbs); i ++) {
         RigidBody *rb1 = getRigidBody(rbs, i);
-        ArrayList *toResolve = rbs->rbArray;
+        ArrayList *toResolve = rbs->rbArray;//getCloseRBS(rbs->q, rb1);
         for (int j = 0; j < length(toResolve); j ++) {
-            if (i == j) continue;
             RigidBody *rb2 = get(toResolve, j);
             resolveRBPen(rb1, rb2);
         }

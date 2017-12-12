@@ -1,6 +1,6 @@
 #include "QTree.h"
 
-static int MAX_BODIES = 2;
+static int MAX_BODIES = 3;
 static int MAX_DEPTH = 4;
 
 QTree *newQTree(int level, int x, int y, int width, int height) {
