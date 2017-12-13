@@ -10,6 +10,7 @@ typedef struct RigidBodies RigidBodies;
 RigidBodies *newRigidBodies(int w, int h, int capacity);
 RigidBody *getRigidBody(RigidBodies *rbs, int i);
 void addRigidBody(RigidBodies *rbs, RigidBody *rb);
+void deleteRigidBody(RigidBodies *rbs, int i);
 int numRigidBodies(RigidBodies *rbs);
 
 //Updating:

@@ -1,7 +1,7 @@
 #include "QTree.h"
 
-static int MAX_BODIES = 3;
-static int MAX_DEPTH = 4;
+static int MAX_BODIES = 2;
+static int MAX_DEPTH = 6;
 
 QTree *newQTree(int level, int x, int y, int width, int height) {
     QTree *q = (QTree*) malloc(sizeof(QTree));
@@ -29,7 +29,6 @@ static void resetQTree(QTree *q) {
         for (int i = 0; i < 4; i ++) {
             resetQTree(q->nodes[i]);
         }
-        free(q->nodes);
         free(q);
     }
 }

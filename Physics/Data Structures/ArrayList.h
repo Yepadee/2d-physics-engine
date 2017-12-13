@@ -14,5 +14,6 @@ void destroy(ArrayList *arrayList);
 int length(ArrayList *arrayList);
 void expand(ArrayList *arrayList);
 void append(ArrayList *arrayList, Type *t);
+void removeArr(ArrayList *arrayList, int i);
 Type *get(ArrayList *arrayList, int i);
 RigidBody *pop(ArrayList *arrayList, int i);

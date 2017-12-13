@@ -30,3 +30,5 @@ void resolvePenEq(Polygon *p1, Polygon *p2);
 void resolvePenDom(Polygon *p1, Polygon *p2);
 
 SDL_Rect getAABB(Polygon *p);
+
+Polygon *newRegularPolygon(int size, double radius, double startX, double startY, Colour c);

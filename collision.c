@@ -10,6 +10,7 @@
 #include "Input\KeyboardInput.h"
 
 #include <sys/time.h>
+#include <stdlib.h>
 #include <assert.h>
 
 const char TITLE[] = "Collision";
@@ -17,7 +18,7 @@ const int W = 1280, H = 720;
 const double TPS = 60;
 
 struct State {
-    bool running, setupMode, testMode;
+    bool running, setupMode, testMode, movingRB;
 };
 typedef struct State State;
 
@@ -27,12 +28,14 @@ State *newState() {
     s->running = true;
     s->setupMode = true;
     s->testMode = false;
+    s->movingRB = false;
     return s;
 }
 RigidBodies *getRigidBodies() {
     //Create an empty pointer to a polygon list.
-    int numRigidBodies = 5;
-    RigidBodies *rbs = newRigidBodies(W, W, numRigidBodies);
+    int numRigidBodies = 0;
+    int numWalls = 4;
+    RigidBodies *rbs = newRigidBodies(W, W, numRigidBodies + numWalls);
 
     double wallXS1[] = {0, 0, 1280, 1280};
     double wallYS1[] = {0, 10, 10, 0};
@@ -58,32 +61,78 @@ RigidBodies *getRigidBodies() {
     addRigidBody(rbs, newRigidBody(1, 1, true, w3));
     addRigidBody(rbs, newRigidBody(1, 1, true, w4));
 
-    //Set up a set of polygons:
-    Colour c0 = {255, 165, 0, 255};
-    double xs0[] = {550, 521, 532, 568, 579};
-    double ys0[] = {520, 541, 574, 574, 541};
+    Colour c = {123, 2, 178, 255};
 
-    for (int i = 0; i < 20; i ++) {
+    for (int i = 0; i < numRigidBodies; i ++) {
         double mass = 1;
         double e = 1;
         bool immovable = false;
-        int n = 5;
-        Polygon *p = newPolygon(n, c0, xs0, ys0);
+        int n = 6;
+        double r = 50;
+
+        double startX = 120;
+        double startY = 50;
+        //Polygon *p = newPolygon(n, c0, xs0, ys0);
+        Polygon *p = newRegularPolygon(n, r, startX, startY, c);
         addRigidBody(rbs, newRigidBody(mass, e, immovable, p));
     }
-    RigidBody *rb = getRigidBody(rbs, 15);
-    rb->xv = 10;
-    rb->yv = 1;
 
     return rbs;
 }
 
+//Helper:
+int randInt(int min, int max) {
+    return (rand() % max) + min;
+}
+RigidBody *randomRigidBody() {
+    double mass = randInt(1, 10);
+    double e = 1;//(double) randInt(1, 100) / 100;
+    bool immovable = false;
+    int size = randInt(3, 9);
+    double radius = (mass + 10) * 2;
 
-//Updating:
+    double startX = Mi.x;
+    double startY = Mi.y;
+
+    int r = randInt(0, 255);
+    int g = randInt(0, 255);
+    int b = randInt(0, 255);
+    int a = 255;
+
+    Colour c = {r, g, b, a};
+
+    Polygon *p = newRegularPolygon(size, radius, startX, startY, c);
+    return newRigidBody(mass, e, immovable, p);
+}
+
 bool touchingMouse(RigidBody *rb) {
     return insidePolygon(Mi.x, Mi.y, rb->polygon);
 }
-void moveByUser(RigidBodies *rbs) {
+
+//Updating:
+void add(RigidBodies *rbs, State *s) {
+    if (mousePressed(SDL_BUTTON_LEFT) && ! s->movingRB) {
+        RigidBody *rb = randomRigidBody();
+        rb->xv = 3;
+        rb->yv = 1;
+        addRigidBody(rbs, rb);
+    }
+}
+void delete(RigidBodies *rbs, State *s) {
+    if (! s->movingRB) {
+        int toDelete = -1;
+        for (int i = 0; i < numRigidBodies(rbs) && toDelete == -1; i ++) {
+            RigidBody *rb = getRigidBody(rbs, i);
+            if (touchingMouse(rb) && mousePressed(SDL_BUTTON_RIGHT)) {
+                toDelete = i;
+            }
+        }
+        if (toDelete >= 0) {
+            deleteRigidBody(rbs, toDelete);
+        }
+    }
+}
+void moveByUser(RigidBodies *rbs, State *s) {
     //Vector2D mousePos = {Mi.x, Mi.y};
     for (int i = 0; i < numRigidBodies(rbs); i ++) {
         RigidBody *rb = getRigidBody(rbs, i);
@@ -92,8 +141,8 @@ void moveByUser(RigidBodies *rbs) {
             rb->xDist = Mi.x - p->xs[0];
             rb->yDist = Mi.y - p->ys[0];
             rb->canMove = true;
+            s->movingRB = true;
         }
-
         if (rb->canMove && mouseMoving()) {
             int initialX = p->xs[0];
             int initialY = p->ys[0];
@@ -107,10 +156,10 @@ void moveByUser(RigidBodies *rbs) {
         }
         if (mouseReleased(SDL_BUTTON_LEFT)) {
             rb->canMove = false;
+            s->movingRB = false;
         }
     }
 }
-
 void update(RigidBodies *rbs, State *s) {
     SDL_Event ev;
     while (SDL_PollEvent(&ev) != 0) {
@@ -118,6 +167,7 @@ void update(RigidBodies *rbs, State *s) {
             s->running = false;
         }
     }
+
     updateKeyboard();
     updateMouse(ev);
 
@@ -125,8 +175,12 @@ void update(RigidBodies *rbs, State *s) {
     if (keyPressed(SDL_SCANCODE_RETURN)) s->setupMode = ! s->setupMode;
     if (keyPressed(SDL_SCANCODE_ESCAPE)) s->running = ! s->running;
 
+
+    moveByUser(rbs, s);
+    add(rbs, s);
+    delete(rbs, s);
+
     if (s->setupMode) {
-        moveByUser(rbs);
         updateRigidBodies(rbs);
         resolveAllPen(rbs);
     } else {
@@ -134,8 +188,10 @@ void update(RigidBodies *rbs, State *s) {
         updateRigidBodies(rbs);
         collideAll(rbs);
     }
-}
 
+
+
+}
 
 //Drawing:
 void drawBackground(SDL_Renderer *renderer) {
@@ -158,23 +214,16 @@ void draw(RigidBodies *rbs, State *s, SDL_Renderer *renderer) {
 //Main Loop:
 void loop(SDL_Renderer *renderer) {
     State *s = newState();
-
     double T = 1000/TPS; //Calculate time for one tick in ms.
-
-
     RigidBodies *rbs = getRigidBodies();
-    resolveAllPen(rbs);
-
 
     double uSPreTick = T * 1000;
     struct timeval tv;
     gettimeofday(&tv, NULL);
-
     long int lastTime, now;
     lastTime = tv.tv_usec;
 
     double unprocessed = 0;
-
     bool canRender = false;
     while(s->running) {
         SDL_Event ev;
@@ -183,7 +232,6 @@ void loop(SDL_Renderer *renderer) {
                 s->running = false;
             }
         }
-
         gettimeofday(&tv, NULL);
         now = tv.tv_usec;
         if (lastTime > now) {
@@ -246,6 +294,7 @@ void tests() {
 
 //Main:
 int main(int argc, char *argv[]) {
+    srand(time(NULL));
     if(SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("SDL could not initialize! SDL Error: %s", SDL_GetError());
         return 0;

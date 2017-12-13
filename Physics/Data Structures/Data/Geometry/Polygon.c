@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <float.h>
 
+#define PI 3.14159265358979323846
+
 struct nodes {
     int size;
     double *xs;
@@ -16,7 +18,7 @@ typedef struct projection Projection;
 
 Vector2D NOTHING = {0, 0};
 
-//Private
+//Helper:
 static double getMax(double *ns, int size) {
     //Returns the largest integer from a list of integers.
     int max = (int) ns[0];
@@ -40,7 +42,7 @@ static double isLeft(int x, int y, int ax, int ay, int bx, int by) {
     return ((bx - ax) * (y - ay) - (x - ax) * (by - ay));
 }
 
-//Public
+//Constructors:
 Polygon *newPolygon(int size, Colour c, double xs[size], double ys[size]) {
     Polygon *p = malloc(sizeof(Polygon));
     p->size = size;
@@ -103,7 +105,6 @@ static Nodes *getDrawList(Polygon *p, int y) {
     }
     return nodes; //return the ordered nodes.
 }
-
 void drawAABB(Polygon *p, SDL_Renderer *renderer) {
     SDL_RenderDrawRect(renderer, p->aabb);
 }
@@ -136,7 +137,7 @@ void movePolygon(Polygon *p, Vector2D dp) {
     }
 }
 
-//Collision:
+//Collision Detection:
 bool insidePolygon(int x, int y, Polygon *p) {
     //Method to test a vertex lies within a polygon by use of winding number method [2]
     //The general theory is that if a point lies outside the polygon, then the winding number of the polygon around that point is 0;
@@ -317,4 +318,22 @@ void resolvePenDom(Polygon *p1, Polygon *p2) {
 
 SDL_Rect getAABB(Polygon *p) {
     return *p->aabb;
+}
+
+Polygon *newRegularPolygon(int size, double radius, double startX, double startY, Colour c) {
+    double xs[size];
+    double ys[size];
+
+    double angle = (2 * PI) / (double) size;
+    bool oddSides = (size % 2 != 0);
+    for (int i = 0; i < size; i ++) {
+        double k = oddSides ? (double) i - 0.25 : (double) i + 0.5;
+        double x = radius * cos(angle * k) + startX;
+        double y = radius * sin(angle * k) + startY;
+        xs[i] = x;
+        ys[i] = y;
+    }
+
+
+    return newPolygon(size, c, xs, ys);
 }

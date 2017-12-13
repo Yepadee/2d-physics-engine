@@ -28,15 +28,18 @@ void append(ArrayList *arrayList, Type *t) {
     arrayList->items[length(arrayList)] = t;
     arrayList->length ++;
 }
+void removeArr(ArrayList *arrayList, int i) {
+    arrayList->length -= 1;
+    for (int j = i; j < length(arrayList); j ++) {
+        arrayList->items[j] = get(arrayList, j + 1);
+    }
+}
 Type *get(ArrayList *arrayList, int i) {
     return arrayList->items[i];
 }
 Type *pop(ArrayList *arrayList, int i) {
     Type *toRemove = get(arrayList, i);
-    arrayList->length -= 1;
-    for (int j = i; j < length(arrayList); j ++) {
-        arrayList->items[j] = get(arrayList, j + 1);
-    }
+    removeArr(arrayList, i);
     return toRemove;
 }
 
