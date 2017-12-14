@@ -16,8 +16,7 @@ int numRigidBodies(RigidBodies *rbs);
 //Updating:
 void collideAll(RigidBodies *rbs);
 void resolveAllPen(RigidBodies *rbs);
-void moveRigidBodies(RigidBodies *rbs);
-void updateRigidBodies(RigidBodies *rbs);
+void updateRigidBodies(RigidBodies *rbs, double dt);
 //Drawing:
 void drawRigidBodies(RigidBodies *rbs, SDL_Renderer *renderer);
 void drawRigidBodiesAABB(RigidBodies *rbs, SDL_Renderer *renderer);

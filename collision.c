@@ -15,7 +15,8 @@
 
 const char TITLE[] = "Collision";
 const int W = 1280, H = 720;
-const double TPS = 60;
+const double TPS = 60.0;
+const double T = 1.0 / 60.0;
 
 struct State {
     bool running, setupMode, testMode, movingRB;
@@ -26,7 +27,7 @@ typedef struct State State;
 State *newState() {
     State *s = malloc(sizeof(State));
     s->running = true;
-    s->setupMode = true;
+    s->setupMode = false;
     s->testMode = false;
     s->movingRB = false;
     return s;
@@ -37,17 +38,18 @@ RigidBodies *getRigidBodies() {
     int numWalls = 4;
     RigidBodies *rbs = newRigidBodies(W, W, numRigidBodies + numWalls);
 
-    double wallXS1[] = {0, 0, 1280, 1280};
-    double wallYS1[] = {0, 10, 10, 0};
+    int thickness = 40;
+    double wallXS1[] = {0, 0, thickness, thickness};
+    double wallYS1[] = {0, 720, 720, 0};
 
-    double wallXS2[] = {0, 0, 1280, 1280};
-    double wallYS2[] = {710, 720, 720, 710};
+    double wallXS2[] = {W - thickness, W - thickness, W, W};
+    double wallYS2[] = {0, H, H, 0};
 
-    double wallXS3[] = {1270, 1260, 1260, 1270};
-    double wallYS3[] = {20, 20, 710, 710};
+    double wallXS3[] = {0, 0, W, W};
+    double wallYS3[] = {0, thickness, thickness, 0};
 
-    double wallXS4[] = {10, 20, 20, 10};
-    double wallYS4[] = {20, 20, 710, 710};
+    double wallXS4[] = {0, 0, W, W};
+    double wallYS4[] = {H - thickness, H, H, H - thickness};
 
     Colour cw = {0, 0, 0, 255};
 
@@ -60,23 +62,6 @@ RigidBodies *getRigidBodies() {
     addRigidBody(rbs, newRigidBody(1, 1, true, w2));
     addRigidBody(rbs, newRigidBody(1, 1, true, w3));
     addRigidBody(rbs, newRigidBody(1, 1, true, w4));
-
-    Colour c = {123, 2, 178, 255};
-
-    for (int i = 0; i < numRigidBodies; i ++) {
-        double mass = 1;
-        double e = 1;
-        bool immovable = false;
-        int n = 6;
-        double r = 50;
-
-        double startX = 120;
-        double startY = 50;
-        //Polygon *p = newPolygon(n, c0, xs0, ys0);
-        Polygon *p = newRegularPolygon(n, r, startX, startY, c);
-        addRigidBody(rbs, newRigidBody(mass, e, immovable, p));
-    }
-
     return rbs;
 }
 
@@ -86,10 +71,10 @@ int randInt(int min, int max) {
 }
 RigidBody *randomRigidBody() {
     double mass = randInt(1, 10);
-    double e = 1;//(double) randInt(1, 100) / 100;
+    double e = (double) randInt(1, 100) / 100;
     bool immovable = false;
     int size = randInt(3, 9);
-    double radius = (mass + 10) * 2;
+    double radius = (mass + 5) * 4;
 
     double startX = Mi.x;
     double startY = Mi.y;
@@ -113,8 +98,9 @@ bool touchingMouse(RigidBody *rb) {
 void add(RigidBodies *rbs, State *s) {
     if (mousePressed(SDL_BUTTON_LEFT) && ! s->movingRB) {
         RigidBody *rb = randomRigidBody();
-        rb->xv = 3;
-        rb->yv = 1;
+        //rb->xv = randInt(64, 256);
+        //rb->yv = randInt(64, 256);
+        //rb->w = (double) randInt(0, 50) / 100;
         addRigidBody(rbs, rb);
     }
 }
@@ -138,21 +124,27 @@ void moveByUser(RigidBodies *rbs, State *s) {
         RigidBody *rb = getRigidBody(rbs, i);
         Polygon *p = rb->polygon;
         if (touchingMouse(rb) && mousePressed(SDL_BUTTON_LEFT)) {
-            rb->xDist = Mi.x - p->xs[0];
-            rb->yDist = Mi.y - p->ys[0];
+            rb->xDist = (double) Mi.x - p->xs[0];
+            rb->yDist = (double) Mi.y - p->ys[0];
             rb->canMove = true;
             s->movingRB = true;
         }
-        if (rb->canMove && mouseMoving()) {
-            int initialX = p->xs[0];
-            int initialY = p->ys[0];
+        if (rb->canMove) {
+            double initialX = p->xs[0];
+            double initialY = p->ys[0];
 
-            int finalX = Mi.x - rb->xDist;
-            int finalY = Mi.y - rb->yDist;
-            int dx = finalX - initialX;
-            int dy = finalY - initialY;
-            Vector2D dp = {dx, dy};
-            moveRigidBody(rb, dp);
+            double finalX = (double) Mi.x - rb->xDist;
+            double finalY = (double) Mi.y - rb->yDist;
+            double dx = finalX - initialX;
+            double dy = finalY - initialY;
+            printf("dx: %f, dy: %f\n", dx, dx);
+            if (! s->setupMode && !isImmovable(rb)) {
+                rb->xv += dx * rb->invMass;
+                rb->yv += dy * rb->invMass;
+            } else if (mouseMoving()){
+                Vector2D dp = {dx, dy};
+                moveRigidBody(rb, dp);
+            }
         }
         if (mouseReleased(SDL_BUTTON_LEFT)) {
             rb->canMove = false;
@@ -181,11 +173,9 @@ void update(RigidBodies *rbs, State *s) {
     delete(rbs, s);
 
     if (s->setupMode) {
-        updateRigidBodies(rbs);
         resolveAllPen(rbs);
     } else {
-        moveRigidBodies(rbs);
-        updateRigidBodies(rbs);
+        updateRigidBodies(rbs, T);
         collideAll(rbs);
     }
 

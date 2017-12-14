@@ -18,7 +18,7 @@ typedef struct projection Projection;
 
 Vector2D NOTHING = {0, 0};
 
-//Helper:
+//Utilities:
 static double getMax(double *ns, int size) {
     //Returns the largest integer from a list of integers.
     int max = (int) ns[0];
@@ -41,6 +41,61 @@ static double isLeft(int x, int y, int ax, int ay, int bx, int by) {
     //< 0 for (x,y) right of the line
     return ((bx - ax) * (y - ay) - (x - ax) * (by - ay));
 }
+static void getArea(Polygon *p) {
+    double area = 0;
+    int j = p->size - 1;
+    for (int i = 0; i < p->size; i ++) {
+        double x1 = p->xs[i];
+        double x2 = p->xs[j];
+        double y1 = p->ys[i];
+        double y2 = p->ys[j];
+        j = i;
+        area += (x1 + x2) * (y1 - y2);
+    }
+    p->area = area / 2;
+}
+Vector2D getCentroid(Polygon *p) {
+    double xSum = 0;
+    double ySum = 0;
+    int j = p->size - 1;
+    for (int i = 0; i < p->size; i ++) {
+        double x1 = p->xs[i];
+        double x2 = p->xs[j];
+        double y1 = p->ys[i];
+        double y2 = p->ys[j];
+        xSum += ((x1 + x2) * (x1 * y2 - x2 * y1));
+        ySum += ((y1 + y2) * (x1 * y2 - x2 * y1));
+        j = i;
+    }
+    double divisor = 6 * p->area;
+    Vector2D centroid = {xSum/divisor, ySum/divisor};
+    return centroid;
+}
+SDL_Rect getAABB(Polygon *p) {
+    SDL_Rect aabb;
+    aabb.x = getMin(p->xs, p->size);
+    aabb.y = getMin(p->ys, p->size);
+    aabb.w = getMax(p->xs, p->size) - aabb.x;
+    aabb.h = getMax(p->ys, p->size) - aabb.y;
+    return aabb;
+}
+Polygon *newRegularPolygon(int size, double radius, double startX, double startY, Colour c) {
+    double xs[size];
+    double ys[size];
+
+    double angle = (2 * PI) / (double) size;
+    bool oddSides = (size % 2 != 0);
+    for (int i = 0; i < size; i ++) {
+        double k = oddSides ? (double) i - 0.25 : (double) i + 0.5;
+        double x = radius * cos(angle * k) + startX;
+        double y = radius * sin(angle * k) + startY;
+        xs[i] = x;
+        ys[i] = y;
+    }
+
+
+    return newPolygon(size, c, xs, ys);
+}
 
 //Constructors:
 Polygon *newPolygon(int size, Colour c, double xs[size], double ys[size]) {
@@ -54,11 +109,8 @@ Polygon *newPolygon(int size, Colour c, double xs[size], double ys[size]) {
         p->xs[i] = xs[i];
         p->ys[i] = ys[i];
     }
-    p->aabb = malloc(sizeof(SDL_Rect));
-    p->aabb->x = getMin(xs, size);
-    p->aabb->y = getMin(ys, size);
-    p->aabb->w = getMax(xs, size) - p->aabb->x;
-    p->aabb->h = getMax(ys, size) - p->aabb->y;
+
+    getArea(p);
     return p;
 }
 static Nodes *newNodes(int size) {
@@ -106,7 +158,8 @@ static Nodes *getDrawList(Polygon *p, int y) {
     return nodes; //return the ordered nodes.
 }
 void drawAABB(Polygon *p, SDL_Renderer *renderer) {
-    SDL_RenderDrawRect(renderer, p->aabb);
+    SDL_Rect aabb = getAABB(p);
+    SDL_RenderDrawRect(renderer, &aabb);
 }
 void drawPolygon(Polygon *p, SDL_Renderer *renderer) {
     Colour c = p->colour;
@@ -127,14 +180,23 @@ void drawPolygon(Polygon *p, SDL_Renderer *renderer) {
     }
 }
 
-//Updating:
+//Transformations:
 void movePolygon(Polygon *p, Vector2D dp) {
     for (int i = 0; i < p->size; i ++) {
         p->xs[i] += dp.i;
         p->ys[i] += dp.j;
-        p->aabb->x = getMin(p->xs, p->size);
-        p->aabb->y = getMin(p->ys, p->size);
     }
+}
+void rotatePolygon(Polygon *p, double angle) {
+    Vector2D axisOfRotation = getCentroid(p);
+    movePolygon(p, axisOfRotation);
+    for (int i = 0; i < p->size; i ++) {
+        double x = p->xs[i];
+        double y = p->ys[i];
+        p->xs[i] = x * cos(angle) - y * sin(angle);
+        p->ys[i] = y * cos(angle) + x * sin(angle);
+    }
+    movePolygon(p, multiplyV2D(axisOfRotation, -1));
 }
 
 //Collision Detection:
@@ -171,8 +233,8 @@ bool insidePolygon(int x, int y, Polygon *p) {
     return wn != 0;
 }
 bool aabbCollision(Polygon *p1, Polygon *p2) {
-    SDL_Rect aabb1 = *p1->aabb;
-    SDL_Rect aabb2 = *p2->aabb;
+    SDL_Rect aabb1 = getAABB(p1);
+    SDL_Rect aabb2 = getAABB(p2);
     return (aabb1.x + aabb1.w >= aabb2.x) && (aabb2.x + aabb2.w >= aabb1.x) &&
            (aabb1.y + aabb1.h >= aabb2.y) && (aabb2.y + aabb2.h >= aabb1.y);
 }
@@ -314,26 +376,4 @@ void resolvePenDom(Polygon *p1, Polygon *p2) {
     if (! equalsV2D(NOTHING, mtv)) {
         movePolygon(p2, multiplyV2D(mtv, - 1));
     }
-}
-
-SDL_Rect getAABB(Polygon *p) {
-    return *p->aabb;
-}
-
-Polygon *newRegularPolygon(int size, double radius, double startX, double startY, Colour c) {
-    double xs[size];
-    double ys[size];
-
-    double angle = (2 * PI) / (double) size;
-    bool oddSides = (size % 2 != 0);
-    for (int i = 0; i < size; i ++) {
-        double k = oddSides ? (double) i - 0.25 : (double) i + 0.5;
-        double x = radius * cos(angle * k) + startX;
-        double y = radius * sin(angle * k) + startY;
-        xs[i] = x;
-        ys[i] = y;
-    }
-
-
-    return newPolygon(size, c, xs, ys);
 }

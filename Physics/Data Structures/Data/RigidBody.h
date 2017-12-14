@@ -6,17 +6,20 @@ struct RigidBody {
 
     double mass;
     double invMass;
+    double mOfInertia;
+    double invMOfInertia;
     double xv;
     double yv;
+    double w;
     double e;
 
     bool canMove;
-    int xDist;
-    int yDist;
+    double xDist;
+    double yDist;
 };
 typedef struct RigidBody RigidBody;
 
-
+bool isImmovable(RigidBody *rb);
 RigidBody *newRigidBody(double mass, double e, bool immovable, Polygon *p);
 
 //Drawing:
@@ -28,4 +31,4 @@ void resolveRBPen(RigidBody *rb1, RigidBody *rb2);
 
 //Updating:
 void moveRigidBody(RigidBody *rb, Vector2D dp);
-void updateRigidBody(RigidBody *rb);
+void updateRigidBody(RigidBody *rb, double dt);

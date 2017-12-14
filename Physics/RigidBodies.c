@@ -24,6 +24,7 @@ int numRigidBodies(RigidBodies *rbs) {
 
 //Updating:
 void collideAll(RigidBodies *rbs) {
+    updateQTree(rbs->q, rbs->rbArray);
     for (int i = 0; i < numRigidBodies(rbs); i ++) {
         RigidBody *rb1 = getRigidBody(rbs, i);
         ArrayList *toCollide = getCloseRBS(rbs->q, rb1);
@@ -34,6 +35,7 @@ void collideAll(RigidBodies *rbs) {
     }
 }
 void resolveAllPen(RigidBodies *rbs) {
+    updateQTree(rbs->q, rbs->rbArray);
     for (int i = 0; i < numRigidBodies(rbs); i ++) {
         RigidBody *rb1 = getRigidBody(rbs, i);
         ArrayList *toResolve = getCloseRBS(rbs->q, rb1);
@@ -43,14 +45,11 @@ void resolveAllPen(RigidBodies *rbs) {
         }
     }
 }
-void moveRigidBodies(RigidBodies *rbs) {
+void updateRigidBodies(RigidBodies *rbs, double dt) {
     for (int i = 0; i < numRigidBodies(rbs); i ++) {
         RigidBody *rb = getRigidBody(rbs, i);
-        updateRigidBody(rb);
+        updateRigidBody(rb, dt);
     }
-}
-void updateRigidBodies(RigidBodies *rbs) {
-    updateQTree(rbs->q, rbs->rbArray);
 }
 //Drawing:
 void drawRigidBodies(RigidBodies *rbs, SDL_Renderer *renderer) {

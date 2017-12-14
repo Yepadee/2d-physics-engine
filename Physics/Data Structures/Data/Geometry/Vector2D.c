@@ -8,6 +8,10 @@ double dotV2D(Vector2D v1, Vector2D v2) {
     return (v1.i * v2.i) + (v1.j * v2.j);
 }
 
+double crossV2D(Vector2D v1, Vector2D v2) {
+    return (v1.i * v2.j) - (v2.i * v1.j);
+}
+
 Vector2D unitV2D(Vector2D v) {
     double mag = magnitudeV2D(v);
     Vector2D unit = {v.i/mag, v.j/mag};

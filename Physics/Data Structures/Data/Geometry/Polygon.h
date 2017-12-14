@@ -8,8 +8,8 @@ typedef struct Colour Colour;
 
 struct Polygon {
     Colour colour;
-    SDL_Rect *aabb;
     int size; //Number of vertices.
+    int area;
     double *xs; //List of x coords.
     double *ys; //List of y coods.
 };
@@ -17,18 +17,21 @@ typedef struct Polygon Polygon;
 
 Polygon *newPolygon(int size, Colour c, double xs[size], double ys[size]);
 
-//Drawing:
-void drawPolygon(Polygon *p, SDL_Renderer *renderer);
-void drawAABB(Polygon *p, SDL_Renderer *renderer);
+//Utilities:
+Polygon *newRegularPolygon(int size, double radius, double startX, double startY, Colour c);
+SDL_Rect getAABB(Polygon *p);
+
+//Transformations:
+void movePolygon(Polygon *p, Vector2D dp);
+void rotatePolygon(Polygon *p, double angle);
 
 //Updating:
-void movePolygon(Polygon *p, Vector2D dp);
 bool insidePolygon(int x, int y, Polygon *p);
 bool colliding(Polygon *p1, Polygon *p2);
 Vector2D getMTV(Polygon *p1, Polygon *p2);
 void resolvePenEq(Polygon *p1, Polygon *p2);
 void resolvePenDom(Polygon *p1, Polygon *p2);
 
-SDL_Rect getAABB(Polygon *p);
-
-Polygon *newRegularPolygon(int size, double radius, double startX, double startY, Colour c);
+//Drawing:
+void drawPolygon(Polygon *p, SDL_Renderer *renderer);
+void drawAABB(Polygon *p, SDL_Renderer *renderer);

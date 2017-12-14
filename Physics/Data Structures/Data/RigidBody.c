@@ -1,5 +1,18 @@
 #include "RigidBody.h"
 
+//Helper:
+bool isImmovable(RigidBody *rb) {
+    return rb->invMass == 0.0000;
+}
+static double min(double x, double y) {
+    return x < y ? x : y;
+}
+static double max(double x, double y) {
+    return x > y ? x : y;
+}
+static void getMOfInertia(RigidBody *rb) {
+    rb->mOfInertia = 1;
+}
 
 //Constructors:
 RigidBody *newRigidBody(double mass, double e, bool immovable, Polygon *p) {
@@ -8,9 +21,11 @@ RigidBody *newRigidBody(double mass, double e, bool immovable, Polygon *p) {
     rb->polygon = p;
 
     rb->mass = mass;
+
     rb->e = e;
     rb->xv = 0;
     rb->yv = 0;
+    rb->w = 0;
 
     rb->canMove = false;
     rb->xDist = 0;
@@ -18,23 +33,13 @@ RigidBody *newRigidBody(double mass, double e, bool immovable, Polygon *p) {
 
     if (immovable) {
         rb->invMass = 0;
+        rb->invMOfInertia = 0;
     } else {
         rb->invMass = (1/mass);
+        rb->invMOfInertia = (1/rb->mOfInertia);
     }
 
     return rb;
-}
-
-static bool isImmovable(RigidBody *rb) {
-    return rb->invMass == 0.0000;
-}
-
-//Helper:
-static double min(double x, double y) {
-    return x < y ? x : y;
-}
-static double max(double x, double y) {
-    return x > y ? x : y;
 }
 
 //Updating:
@@ -93,9 +98,16 @@ void drawRigidBody(RigidBody *rb, SDL_Renderer *renderer) {
 void moveRigidBody(RigidBody *rb, Vector2D dp) {
     movePolygon(rb->polygon, dp);
 }
-void updateRigidBody(RigidBody *rb) {
-    Vector2D dp = {rb->xv, rb->yv};
+void rotateRigidBody(RigidBody *rb, double angle) {
+    rotatePolygon(rb->polygon, angle);
+}
+void updateRigidBody(RigidBody *rb, double dt) {
+    Vector2D dp = {rb->xv * dt, rb->yv * dt};
+    if (! isImmovable(rb)) {
+        rb->yv += 9.8;
+    }
     moveRigidBody(rb, dp);
+    rotateRigidBody(rb, rb->w);
 }
 
 //Testing:
