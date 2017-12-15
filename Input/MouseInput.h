@@ -13,5 +13,6 @@ MouseInput Mi;
 
 bool mousePressed(int mouseButton);
 bool mouseReleased(int mouseButton);
+bool mouseDown(int mouseButton);
 bool mouseMoving();
 void updateMouse(SDL_Event ev);

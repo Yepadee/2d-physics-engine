@@ -31,4 +31,5 @@ void resolveRBPen(RigidBody *rb1, RigidBody *rb2);
 
 //Updating:
 void moveRigidBody(RigidBody *rb, Vector2D dp);
+void applyGravity(RigidBody *rb);
 void updateRigidBody(RigidBody *rb, double dt);

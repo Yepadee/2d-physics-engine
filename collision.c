@@ -19,7 +19,7 @@ const double TPS = 60.0;
 const double T = 1.0 / 60.0;
 
 struct State {
-    bool running, setupMode, testMode, movingRB;
+    bool running, setupMode, testMode, movingRB, gravity;
 };
 typedef struct State State;
 
@@ -30,6 +30,7 @@ State *newState() {
     s->setupMode = false;
     s->testMode = false;
     s->movingRB = false;
+    s->gravity = true;
     return s;
 }
 RigidBodies *getRigidBodies() {
@@ -73,7 +74,7 @@ RigidBody *randomRigidBody() {
     double mass = randInt(1, 10);
     double e = (double) randInt(1, 100) / 100;
     bool immovable = false;
-    int size = randInt(3, 9);
+    int size = randInt(4, 9);
     double radius = (mass + 5) * 4;
 
     double startX = Mi.x;
@@ -89,7 +90,6 @@ RigidBody *randomRigidBody() {
     Polygon *p = newRegularPolygon(size, radius, startX, startY, c);
     return newRigidBody(mass, e, immovable, p);
 }
-
 bool touchingMouse(RigidBody *rb) {
     return insidePolygon(Mi.x, Mi.y, rb->polygon);
 }
@@ -119,7 +119,6 @@ void delete(RigidBodies *rbs, State *s) {
     }
 }
 void moveByUser(RigidBodies *rbs, State *s) {
-    //Vector2D mousePos = {Mi.x, Mi.y};
     for (int i = 0; i < numRigidBodies(rbs); i ++) {
         RigidBody *rb = getRigidBody(rbs, i);
         Polygon *p = rb->polygon;
@@ -129,22 +128,23 @@ void moveByUser(RigidBodies *rbs, State *s) {
             rb->canMove = true;
             s->movingRB = true;
         }
-        if (rb->canMove) {
-            double initialX = p->xs[0];
-            double initialY = p->ys[0];
+        double initialX = p->xs[0];
+        double initialY = p->ys[0];
 
-            double finalX = (double) Mi.x - rb->xDist;
-            double finalY = (double) Mi.y - rb->yDist;
-            double dx = finalX - initialX;
-            double dy = finalY - initialY;
-            printf("dx: %f, dy: %f\n", dx, dx);
-            if (! s->setupMode && !isImmovable(rb)) {
-                rb->xv += dx * rb->invMass;
-                rb->yv += dy * rb->invMass;
-            } else if (mouseMoving()){
+        double finalX = (double) Mi.x - rb->xDist;
+        double finalY = (double) Mi.y - rb->yDist;
+        double dx = finalX - initialX;
+        double dy = finalY - initialY;
+        if (rb->canMove) {
+            if (mouseMoving()){
                 Vector2D dp = {dx, dy};
                 moveRigidBody(rb, dp);
             }
+            if (! isImmovable(rb)) {
+                rb->xv = dx * 10;
+                rb->yv = dy * 10;
+            }
+
         }
         if (mouseReleased(SDL_BUTTON_LEFT)) {
             rb->canMove = false;
@@ -164,8 +164,10 @@ void update(RigidBodies *rbs, State *s) {
     updateMouse(ev);
 
     if (keyPressed(SDL_SCANCODE_T)) s->testMode = ! s->testMode;
+    if (keyPressed(SDL_SCANCODE_G)) s->gravity = ! s->gravity;
     if (keyPressed(SDL_SCANCODE_RETURN)) s->setupMode = ! s->setupMode;
     if (keyPressed(SDL_SCANCODE_ESCAPE)) s->running = ! s->running;
+
 
 
     moveByUser(rbs, s);
@@ -175,9 +177,10 @@ void update(RigidBodies *rbs, State *s) {
     if (s->setupMode) {
         resolveAllPen(rbs);
     } else {
-        updateRigidBodies(rbs, T);
+        updateRigidBodies(rbs, T, s->gravity);
         collideAll(rbs);
     }
+    //resolveAllPen(rbs);
 
 
 
@@ -267,16 +270,6 @@ void tests() {
     assert(p->size == size);
     assert(p->xs[0] == xs[0]);
     assert(p->ys[0] == ys[0]);
-
-    /*
-    Vector2D v1 = {3, 4};
-    Vector2D v2 = {6, 8};
-    assert(magnitudeV2D(v1) == 5);
-    assert(dotV2D(v1, v2) == 50);
-    Vector2D d = subtractV2D(v2, v1);
-    assert(d.i == 3 && d.j == 4);
-    */
-
 
     puts("All tests passed!");
 

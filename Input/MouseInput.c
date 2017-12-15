@@ -10,6 +10,10 @@ bool mouseReleased(int mouseButton) {
     //Check to see if the mouse has just been released this tick.
     return ! Mi.buttons[mouseButton] && Mi.lastButtons[mouseButton];
 }
+bool mouseDown(int mouseButton) {
+    //Check to see if the mouse is down during this tick.
+    return Mi.buttons[mouseButton];
+}
 bool mouseMoving() {
     //Return whether or not the mouse is moving during this tick.
     return Mi.moving;

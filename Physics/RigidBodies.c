@@ -45,10 +45,13 @@ void resolveAllPen(RigidBodies *rbs) {
         }
     }
 }
-void updateRigidBodies(RigidBodies *rbs, double dt) {
+void updateRigidBodies(RigidBodies *rbs, double dt, bool gravity) {
     for (int i = 0; i < numRigidBodies(rbs); i ++) {
         RigidBody *rb = getRigidBody(rbs, i);
         updateRigidBody(rb, dt);
+        if (gravity) {
+            applyGravity(rb);
+        }
     }
 }
 //Drawing:

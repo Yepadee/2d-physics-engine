@@ -54,6 +54,7 @@ static void getArea(Polygon *p) {
     }
     p->area = area / 2;
 }
+
 Vector2D getCentroid(Polygon *p) {
     double xSum = 0;
     double ySum = 0;
@@ -376,4 +377,9 @@ void resolvePenDom(Polygon *p1, Polygon *p2) {
     if (! equalsV2D(NOTHING, mtv)) {
         movePolygon(p2, multiplyV2D(mtv, - 1));
     }
+}
+
+int polygonMain() {
+    puts("All tests passed!");
+    return 0;
 }

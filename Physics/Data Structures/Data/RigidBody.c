@@ -1,5 +1,7 @@
 #include "RigidBody.h"
 
+const double G = 9.8;
+
 //Helper:
 bool isImmovable(RigidBody *rb) {
     return rb->invMass == 0.0000;
@@ -38,7 +40,6 @@ RigidBody *newRigidBody(double mass, double e, bool immovable, Polygon *p) {
         rb->invMass = (1/mass);
         rb->invMOfInertia = (1/rb->mOfInertia);
     }
-
     return rb;
 }
 
@@ -64,7 +65,9 @@ void collide(RigidBody *rb1, RigidBody *rb2) {
             rb2->xv += rb2->invMass * impulse.i;
             rb2->yv += rb2->invMass * impulse.j;
         }
-        double percent = 0.2; // usually 20% to 80%
+
+
+        double percent = 0.8; // usually 20% to 80%
         double slop = 0.01; // usually 0.01 to 0.1
         double magnitude = (max(overlap - slop, 0) / (rb1->invMass + rb2->invMass)) * percent;
 
@@ -74,9 +77,11 @@ void collide(RigidBody *rb1, RigidBody *rb2) {
             movePolygon(rb2->polygon, multiplyV2D(correction, -rb2->invMass));
         } else if (isImmovable(rb1) && ! isImmovable(rb2)) {
             movePolygon(rb2->polygon, multiplyV2D(correction, rb2->invMass + rb1->invMass));
-        } else if (!isImmovable(rb1) && isImmovable(rb2)) {
+        } else if (! isImmovable(rb1) && isImmovable(rb2)) {
             movePolygon(rb1->polygon, multiplyV2D(correction, rb2->invMass + rb1->invMass));
         }
+
+        //resolveRBPen(rb1, rb2, MTV);
     }
 }
 void resolveRBPen(RigidBody *rb1, RigidBody *rb2) {
@@ -101,11 +106,13 @@ void moveRigidBody(RigidBody *rb, Vector2D dp) {
 void rotateRigidBody(RigidBody *rb, double angle) {
     rotatePolygon(rb->polygon, angle);
 }
+void applyGravity(RigidBody *rb) {
+    if (! isImmovable(rb)) {
+        rb->yv += G;
+    }
+}
 void updateRigidBody(RigidBody *rb, double dt) {
     Vector2D dp = {rb->xv * dt, rb->yv * dt};
-    if (! isImmovable(rb)) {
-        rb->yv += 9.8;
-    }
     moveRigidBody(rb, dp);
     rotateRigidBody(rb, rb->w);
 }
